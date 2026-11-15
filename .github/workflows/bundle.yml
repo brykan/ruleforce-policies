@@ -1,0 +1,54 @@
+name: test-build-publish
+
+# On every merge to main: test the policies, build an OPA bundle whose revision is
+# the commit SHA, and publish it as the `bundle.tar.gz` asset on the `policy-bundle`
+# release. The OPA runtime polls that asset every 20-30 s, so a merge (or a revert)
+# goes live without redeploying OPA or ODC.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-bundle
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: open-policy-agent/setup-opa@v2
+        with:
+          version: 1.22.4
+
+      - name: Format and type check
+        run: |
+          opa fmt --fail --list policies
+          opa check --strict policies
+
+      - name: Test
+        run: opa test policies -v
+
+      - name: Build bundle (revision = commit SHA)
+        run: |
+          opa build -b policies \
+            --ignore '*_test.rego' \
+            --revision "${GITHUB_SHA}" \
+            -o bundle.tar.gz
+          tar tzf bundle.tar.gz
+
+      - name: Publish to the policy-bundle release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view policy-bundle >/dev/null 2>&1 || \
+            gh release create policy-bundle --title "Live OPA bundle" \
+              --notes "Overwritten on every merge to main. OPA polls bundle.tar.gz from here."
+          gh release upload policy-bundle bundle.tar.gz --clobber
+          gh release edit policy-bundle --notes "Live revision: ${GITHUB_SHA}"
