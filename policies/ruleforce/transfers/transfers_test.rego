@@ -115,7 +115,29 @@ test_deny_beats_approval if {
 # --- Fail-safe default --------------------------------------------------------
 
 test_empty_input_never_allows if {
-	result({}) == {"result": "deny", "reasons": {"incomplete_input"}}
+	r := result({})
+	r.result == "deny"
+	"incomplete_input" in r.reasons
+}
+
+# --- Requester authorization (v3) ---------------------------------------------
+
+test_requester_without_treasury_user_denied if {
+	approver_only := object.union(xfer(ops_001, vend_778, 2500), {"requester": {"id": "sam.approver", "roles": ["TreasuryApprover"]}})
+	result(approver_only) == {"result": "deny", "reasons": {"requester_not_authorized"}}
+}
+
+test_requester_with_no_roles_denied if {
+	no_roles := object.union(xfer(ops_001, vend_778, 2500), {"requester": {"id": "eve", "roles": []}})
+	"requester_not_authorized" in result(no_roles).reasons
+}
+
+test_requester_missing_roles_denied if {
+	base := object.remove(xfer(ops_001, vend_778, 2500), ["requester"])
+	inp := object.union(base, {"requester": {"id": "eve"}})
+	r := result(inp)
+	r.result == "deny"
+	"requester_not_authorized" in r.reasons
 }
 
 test_missing_account_status_denies if {

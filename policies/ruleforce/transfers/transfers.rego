@@ -18,6 +18,7 @@ deny_reasons contains "invalid_amount" if input.amount <= 0
 
 complete_input if {
 	is_string(input.requester.id)
+	is_array(input.requester.roles)
 	is_string(input.from_account.status)
 	is_number(input.from_account.balance)
 	is_number(input.from_account.daily_limit)
@@ -25,6 +26,14 @@ complete_input if {
 	is_number(input.amount)
 	is_number(input.today_total)
 }
+
+# Only treasury users may initiate transfers. Roles are looked up by ODC from the
+# signed-in user, never taken from the agent, so "I'm the CFO" cannot satisfy this.
+# Written as a named rule + `not`, not `not "TreasuryUser" in input.requester.roles`:
+# the inline form does not fire when `roles` is missing, which allowed the transfer.
+requester_is_treasury_user if "TreasuryUser" in input.requester.roles
+
+deny_reasons contains "requester_not_authorized" if not requester_is_treasury_user
 
 deny_reasons contains "account_not_active" if input.from_account.status != "Active"
 
