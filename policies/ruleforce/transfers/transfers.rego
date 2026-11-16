@@ -49,7 +49,7 @@ deny_reasons contains "self_approval" if {
 	input.approval.approver_id == input.requester.id
 }
 
-needs_approval if input.amount > 15000
+needs_approval if input.amount > 10000
 
 approved if {
 	input.approval.decision == "approved"
@@ -58,7 +58,7 @@ approved if {
 
 decision := {"result": "deny", "reasons": deny_reasons} if count(deny_reasons) > 0
 
-decision := {"result": "require_approval", "reasons": ["amount_over_15000"]} if {
+decision := {"result": "require_approval", "reasons": ["amount_over_10000"]} if {
 	count(deny_reasons) == 0
 	needs_approval
 	not approved
