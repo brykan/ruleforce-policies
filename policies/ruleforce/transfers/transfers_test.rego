@@ -11,7 +11,7 @@ vend_778 := {"number": "VEND-778", "status": "Active", "balance": 5000, "daily_l
 
 frozen_009 := {"number": "FROZEN-009", "status": "Frozen", "balance": 80000, "daily_limit": 25000}
 
-ext_999 := {"number": "EXT-999", "status": "Active", "balance": 0, "daily_limit": 10000}
+ext_999 := {"number": "EXT-999", "status": "Active", "balance": 0, "daily_limit": 15000}
 
 dana := {"id": "dana.treasury", "roles": ["TreasuryUser"]}
 
@@ -36,36 +36,36 @@ test_scenario_a_allow if {
 	result(xfer(ops_001, vend_778, 2500)) == {"result": "allow", "reasons": []}
 }
 
-test_exactly_10000_is_allowed_without_approval if {
-	result(xfer(ops_001, vend_778, 10000)).result == "allow"
+test_exactly_15000_is_allowed_without_approval if {
+	result(xfer(ops_001, vend_778, 15000)).result == "allow"
 }
 
 # --- Scenario B: needs approval, then approved --------------------------------
 
 test_scenario_b_requires_approval if {
-	result(xfer(ops_001, vend_778, 12000)) == {"result": "require_approval", "reasons": ["amount_over_10000"]}
+	result(xfer(ops_001, vend_778, 16000)) == {"result": "require_approval", "reasons": ["amount_over_15000"]}
 }
 
 test_scenario_b_approved_by_approver if {
-	inp := object.union(xfer(ops_001, vend_778, 12000), {"approval": sam_approves})
+	inp := object.union(xfer(ops_001, vend_778, 16000), {"approval": sam_approves})
 	result(inp) == {"result": "allow", "reasons": ["approved"]}
 }
 
 test_approval_rejected_stays_pending if {
 	rejected := object.union(sam_approves, {"decision": "rejected"})
-	inp := object.union(xfer(ops_001, vend_778, 12000), {"approval": rejected})
+	inp := object.union(xfer(ops_001, vend_778, 16000), {"approval": rejected})
 	result(inp).result == "require_approval"
 }
 
 test_approval_without_approver_role_stays_pending if {
 	no_role := object.union(sam_approves, {"approver_roles": ["TreasuryUser"]})
-	inp := object.union(xfer(ops_001, vend_778, 12000), {"approval": no_role})
+	inp := object.union(xfer(ops_001, vend_778, 16000), {"approval": no_role})
 	result(inp).result == "require_approval"
 }
 
 test_self_approval_denied if {
 	self := object.union(sam_approves, {"approver_id": "dana.treasury"})
-	inp := object.union(xfer(ops_001, vend_778, 12000), {"approval": self})
+	inp := object.union(xfer(ops_001, vend_778, 16000), {"approval": self})
 	r := result(inp)
 	r.result == "deny"
 	"self_approval" in r.reasons
@@ -108,7 +108,7 @@ test_deny_daily_limit_counts_today_total if {
 }
 
 test_deny_beats_approval if {
-	inp := object.union(xfer(frozen_009, vend_778, 12000), {"approval": sam_approves})
+	inp := object.union(xfer(frozen_009, vend_778, 16000), {"approval": sam_approves})
 	result(inp).result == "deny"
 }
 
